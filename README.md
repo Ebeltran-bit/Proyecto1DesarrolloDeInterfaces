@@ -95,3 +95,93 @@ El programa arranca con 4 personas de ejemplo (P001–P004).
 
 - **Fase 2 (empresas + base de datos):** añadir `Modelos/Empresa.cs`, `IRepositorioEmpresas`, `ServicioEmpresas`, `MenuEmpresas` y los repositorios de BD. `Persona.Empresa` (texto) pasa a `IdEmpresa`. `Menu`, `Tabla`, `Pantalla`, `CodigoId` (`E001`) y `Resultado` se reutilizan sin cambios.
 - **Interfaz gráfica / web:** Modelos, Datos y Servicios no dependen de la consola; se podrán mover a una biblioteca de clases y reutilizar.
+
+## Modelo de datos previsto (Fase 2 — provisional)
+
+> Esquema orientativo. Se ajustará cuando se conozca el motor de base de datos; la sintaxis del
+> autoincremental cambia según el motor (`AUTOINCREMENT` en SQLite, `IDENTITY` en SQL Server,
+> `AUTO_INCREMENT` en MySQL).
+
+### Relación
+
+```
+┌──────────────────────┐           ┌──────────────────────┐
+│       EMPRESAS       │           │       PERSONAS       │
+├──────────────────────┤           ├──────────────────────┤
+│ PK IdEmpresa         │ 1       N │ PK IdPersona         │
+│    NombreComercial   │───────────│ FK IdEmpresa (NULL)  │
+│    Cif     (único)   │           │    Nombre            │
+│    Telefono          │           │    Apellidos         │
+│    Correo            │           │    Telefono          │
+│    Direccion         │           │    Correo  (único)   │
+└──────────────────────┘           │    Cargo             │
+                                   └──────────────────────┘
+```
+
+- **Una empresa tiene varias personas (1:N)** y una persona pertenece como máximo a una empresa.
+- `Personas.IdEmpresa` admite `NULL`: una persona puede no tener empresa asignada.
+- Los Id son enteros autoincrementales generados por la base de datos; `P001` / `E001` es solo cómo se muestran.
+
+### Tablas
+
+| Tabla | Campo | Tipo | Restricciones |
+|---|---|---|---|
+| Empresas | IdEmpresa | entero | PK, autoincremental |
+| | NombreComercial | texto(100) | obligatorio |
+| | Cif | texto(9) | obligatorio, único |
+| | Telefono | texto(16) | obligatorio |
+| | Correo | texto(100) | obligatorio |
+| | Direccion | texto(150) | obligatorio |
+| Personas | IdPersona | entero | PK, autoincremental |
+| | Nombre | texto(50) | obligatorio |
+| | Apellidos | texto(100) | obligatorio |
+| | Telefono | texto(16) | obligatorio |
+| | Correo | texto(100) | obligatorio, único |
+| | Cargo | texto(50) | opcional |
+| | IdEmpresa | entero | FK → Empresas.IdEmpresa, admite NULL |
+
+### Script orientativo
+
+```sql
+CREATE TABLE Empresas (
+    IdEmpresa       INTEGER PRIMARY KEY,      -- autoincremental
+    NombreComercial VARCHAR(100) NOT NULL,
+    Cif             VARCHAR(9)   NOT NULL UNIQUE,
+    Telefono        VARCHAR(16)  NOT NULL,
+    Correo          VARCHAR(100) NOT NULL,
+    Direccion       VARCHAR(150) NOT NULL
+);
+
+CREATE TABLE Personas (
+    IdPersona  INTEGER PRIMARY KEY,           -- autoincremental
+    Nombre     VARCHAR(50)  NOT NULL,
+    Apellidos  VARCHAR(100) NOT NULL,
+    Telefono   VARCHAR(16)  NOT NULL,
+    Correo     VARCHAR(100) NOT NULL UNIQUE,
+    Cargo      VARCHAR(50)  NULL,
+    IdEmpresa  INTEGER      NULL,
+    FOREIGN KEY (IdEmpresa) REFERENCES Empresas(IdEmpresa) ON DELETE SET NULL
+);
+
+-- Consulta final del proyecto: qué personas pertenecen a cada empresa
+SELECT e.NombreComercial, p.Nombre, p.Apellidos, p.Cargo
+FROM Empresas e
+LEFT JOIN Personas p ON p.IdEmpresa = e.IdEmpresa
+ORDER BY e.NombreComercial, p.Apellidos, p.Nombre;
+```
+
+### Decisiones pendientes
+
+- **Borrar una empresa con personas:** se propone `ON DELETE SET NULL` (las personas se conservan sin empresa)
+  y que la aplicación muestre antes las personas afectadas y pida confirmación. La alternativa es impedir el
+  borrado mientras tenga personas (`ON DELETE RESTRICT`).
+
+### Cambios en el código
+
+| Ahora (Fase 1) | Fase 2 |
+|---|---|
+| `Persona.Empresa` (texto) | `Persona.IdEmpresa` (`int?`) |
+| — | `Modelos/Empresa.cs` |
+| `RepositorioPersonasMemoria` | `RepositorioPersonasBD` (implementa la misma `IRepositorioPersonas`) |
+| — | `IRepositorioEmpresas` + `RepositorioEmpresasBD` |
+| `Program.cs` l. 12 | Se cambia el repositorio en memoria por el de base de datos |
