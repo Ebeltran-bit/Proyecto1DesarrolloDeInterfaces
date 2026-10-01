@@ -1,0 +1,14 @@
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\bin\Debug\net10.0\MiProyecto.exe
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\bin\Debug\net10.0\MiProyecto.deps.json
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\bin\Debug\net10.0\MiProyecto.runtimeconfig.json
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\bin\Debug\net10.0\MiProyecto.dll
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\bin\Debug\net10.0\MiProyecto.pdb
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.GeneratedMSBuildEditorConfig.editorconfig
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.AssemblyInfoInputs.cache
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.AssemblyInfo.cs
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.csproj.CoreCompileInputs.cache
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.dll
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\refint\MiProyecto.dll
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.pdb
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\MiProyecto.genruntimeconfig.cache
+E:\2_DAM\ASIGNATURAS\DESARROLLO_INTERFACES\1Trimestre\Proyecto1\MiProyecto\obj\Debug\net10.0\ref\MiProyecto.dll
