@@ -10,10 +10,12 @@ namespace AgendaConsultora.Servicios;
 public class ServicioPersonas
 {
     private readonly IRepositorioPersonas repositorio;
+    private readonly IRepositorioEmpresas repositorioEmpresas;
 
-    public ServicioPersonas(IRepositorioPersonas repositorio)
+    public ServicioPersonas(IRepositorioPersonas repositorio, IRepositorioEmpresas repositorioEmpresas)
     {
         this.repositorio = repositorio;
+        this.repositorioEmpresas = repositorioEmpresas;
     }
 
     public List<Persona> ObtenerTodas() => OrdenarPorApellidos(repositorio.ObtenerTodas());
@@ -41,6 +43,20 @@ public class ServicioPersonas
             return null;
 
         return $"Correo: ya pertenece a {duenio.Codigo} - {duenio.NombreCompleto}.";
+    }
+
+    // Una persona solo se puede vincular a una empresa que exista y esté activa.
+    public string? ComprobarEmpresaAsignable(int? idEmpresa)
+    {
+        if (idEmpresa == null)
+            return null;
+
+        Empresa? empresa = repositorioEmpresas.ObtenerPorId(idEmpresa.Value);
+
+        if (empresa != null && empresa.EstaActiva)
+            return null;
+
+        return $"Empresa: no existe ninguna empresa activa con Id {CodigoId.Formatear(Empresa.PrefijoId, idEmpresa.Value)}.";
     }
 
     public Resultado DarDeAlta(Persona persona)
@@ -73,10 +89,9 @@ public class ServicioPersonas
         ValidadorPersona.Normalizar(persona);
 
         List<string> errores = ValidadorPersona.Validar(persona);
-
-        string? errorCorreo = ComprobarCorreoLibre(persona.Correo, persona.Id);
-        if (errorCorreo != null)
-            errores.Add(errorCorreo);
+        errores.AddRange(Validador.Reunir(
+            ComprobarCorreoLibre(persona.Correo, persona.Id),
+            ComprobarEmpresaAsignable(persona.IdEmpresa)));
 
         return Resultado.Desde(errores);
     }

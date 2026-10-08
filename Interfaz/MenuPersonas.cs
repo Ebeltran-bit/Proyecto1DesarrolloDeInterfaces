@@ -4,277 +4,139 @@ using AgendaConsultora.Utilidades;
 
 namespace AgendaConsultora.Interfaz;
 
-// Pantallas de gestión de personas. Solo pide datos y muestra resultados:
-// las reglas y el guardado los decide ServicioPersonas.
-public class MenuPersonas
+// Menú de personas. Las pantallas comunes están en MenuEntidad; aquí solo va lo propio
+// de las personas: sus campos, la baja y el vínculo con una empresa.
+public class MenuPersonas : MenuEntidad<Persona>
 {
     private readonly ServicioPersonas servicio;
-    private readonly List<CampoPersona> campos;
-    private readonly List<Columna<Persona>> columnasTabla;
+    private readonly ServicioEmpresas servicioEmpresas;
 
-    public MenuPersonas(ServicioPersonas servicio)
+    public MenuPersonas(ServicioPersonas servicio, ServicioEmpresas servicioEmpresas)
     {
         this.servicio = servicio;
-        campos = CrearCampos();
-        columnasTabla = CrearColumnasTabla();
+        this.servicioEmpresas = servicioEmpresas;
     }
 
-    // ------------------------------------------------------------
-    //  Opciones del menú
-    // ------------------------------------------------------------
+    protected override string Singular => "persona";
+    protected override string Plural => "personas";
+    protected override string PrefijoId => Persona.PrefijoId;
+    protected override string TextoBusqueda => "nombre/apellidos";
+    protected override string OrdenListado => "apellidos";
 
-    public void DarDeAlta()
+    protected override Persona CrearNueva() => new();
+    protected override string Describir(Persona persona) => $"{persona.Codigo} - {persona.NombreCompleto}";
+
+    protected override List<Persona> ObtenerTodas() => servicio.ObtenerTodas();
+    protected override List<Persona> BuscarCoincidencias(string criterio) => servicio.Buscar(criterio);
+    protected override Resultado GuardarNueva(Persona persona) => servicio.DarDeAlta(persona);
+    protected override Resultado GuardarCambios(Persona persona) => servicio.Modificar(persona);
+
+    protected override List<OpcionMenu> CrearOpciones() => new()
     {
-        Pantalla.MostrarTitulo("ALTA DE PERSONA");
-        Console.WriteLine("Los campos con * son obligatorios.");
-
-        var nueva = new Persona();
-        foreach (CampoPersona campo in campos)
-        {
-            string mensaje = campo.Obligatorio
-                ? $"{campo.Etiqueta}*: "
-                : $"{campo.Etiqueta} (Enter si no tiene): ";
-
-            campo.Asignar(nueva, PedirValor(campo, nueva, mensaje));
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Datos introducidos:");
-        MostrarFicha(nueva);
-
-        if (!Pantalla.LeerConfirmacion("¿Guardar esta persona?"))
-        {
-            Pantalla.MostrarAviso("Alta cancelada. No se ha guardado nada.");
-            return;
-        }
-
-        Resultado resultado = servicio.DarDeAlta(nueva);
-
-        if (resultado.Correcto)
-            Pantalla.MostrarExito($"Alta realizada: {nueva.Codigo} - {nueva.NombreCompleto}.");
-        else
-            Pantalla.MostrarErrores(resultado.Errores);
-    }
-
-    public void Listar()
-    {
-        Pantalla.MostrarTitulo("LISTADO DE PERSONAS (ordenado por apellidos)");
-
-        List<Persona> personas = servicio.ObtenerTodas();
-
-        if (personas.Count == 0)
-        {
-            Pantalla.MostrarAviso("La agenda está vacía.");
-            return;
-        }
-
-        Tabla.Mostrar(personas, columnasTabla);
-        Console.WriteLine($"Total: {personas.Count} persona(s).");
-    }
-
-    public void Buscar()
-    {
-        Pantalla.MostrarTitulo("BUSCAR PERSONA");
-
-        string criterio = Pantalla.LeerTexto("Id (ej. P003) o texto del nombre/apellidos: ");
-        if (criterio == "")
-        {
-            Pantalla.MostrarError("Debes escribir algo para buscar.");
-            return;
-        }
-
-        List<Persona> resultado = servicio.Buscar(criterio);
-
-        if (resultado.Count == 0)
-        {
-            Pantalla.MostrarAviso($"No se ha encontrado ninguna persona para \"{criterio}\".");
-            return;
-        }
-
-        Tabla.Mostrar(resultado, columnasTabla);
-        Console.WriteLine($"{resultado.Count} coincidencia(s).");
-    }
-
-    public void Modificar()
-    {
-        Pantalla.MostrarTitulo("MODIFICAR PERSONA");
-
-        if (Localizar() is not Persona persona)
-            return;
-
-        Console.WriteLine("Persona seleccionada:");
-        MostrarFicha(persona);
-
-        // Un submenú generado a partir de los campos: muestra el valor actual de cada uno.
-        List<OpcionMenu> opciones = campos
-            .Select((campo, indice) => new OpcionMenu(
-                indice + 1,
-                () => $"{campo.Etiqueta,-10} ({Pantalla.TextoOGuion(campo.Obtener(persona))})",
-                () => CambiarCampo(persona, campo)))
-            .ToList();
-
-        new Menu($"MODIFICAR {persona.Codigo} - {persona.NombreCompleto}", "Terminar y volver", opciones).Ejecutar();
-
-        Console.WriteLine("Estado final de la persona:");
-        MostrarFicha(persona);
-    }
+        new(1, "Dar de alta una persona", DarDeAlta),
+        new(2, "Listar personas", Listar),
+        new(3, "Buscar persona", Buscar),
+        new(4, "Modificar persona", Modificar),
+        new(5, "Dar de baja una persona", DarDeBaja),
+    };
 
     public void DarDeBaja()
     {
         Pantalla.MostrarTitulo("BAJA DE PERSONA");
 
-        if (Localizar() is not Persona persona)
+        if (Localizar(BuscarCoincidencias) is not Persona persona)
             return;
 
         Console.WriteLine("Se va a eliminar esta persona:");
         MostrarFicha(persona);
 
-        if (!Pantalla.LeerConfirmacion($"¿Seguro que quieres eliminar a {persona.Codigo} - {persona.NombreCompleto}?"))
+        if (!Pantalla.LeerConfirmacion($"¿Seguro que quieres eliminar a {Describir(persona)}?"))
         {
             Pantalla.MostrarAviso("Baja cancelada. No se ha eliminado nada.");
             return;
         }
 
         if (servicio.Eliminar(persona.Id))
-            Pantalla.MostrarExito($"{persona.Codigo} - {persona.NombreCompleto} eliminado/a de la agenda.");
+            Pantalla.MostrarExito($"{Describir(persona)} eliminado/a de la agenda.");
         else
             Pantalla.MostrarError($"{persona.Codigo} ya no existe.");
     }
 
-    // ------------------------------------------------------------
-    //  Funciones auxiliares
-    // ------------------------------------------------------------
-
-    // Pide un Id o texto y devuelve una única persona, o null si no existe.
-    // Modificar y dar de baja lo usan para localizar el registro antes de actuar.
-    private Persona? Localizar()
+    protected override List<Campo<Persona>> CrearCampos() => new()
     {
-        string criterio = Pantalla.LeerTexto("Id o texto del nombre/apellidos (Enter para volver): ");
-        if (criterio == "")
+        new("Nombre", true, 12, p => p.Nombre, (p, valor) => p.Nombre = valor,
+            Validador.NormalizarTexto,
+            (valor, _) => ValidadorPersona.ValidarNombre(valor, "Nombre")),
+
+        new("Apellidos", true, 16, p => p.Apellidos, (p, valor) => p.Apellidos = valor,
+            Validador.NormalizarTexto,
+            (valor, _) => ValidadorPersona.ValidarNombre(valor, "Apellidos")),
+
+        new("Teléfono", true, 13, p => p.Telefono, (p, valor) => p.Telefono = valor,
+            Validador.NormalizarTelefono,
+            (valor, _) => Validador.ValidarTelefono(valor)),
+
+        new("Correo", true, 24, p => p.Correo, (p, valor) => p.Correo = valor,
+            Validador.NormalizarCorreo,
+            (valor, p) => Validador.ValidarCorreo(valor) ?? servicio.ComprobarCorreoLibre(valor, p.Id)),
+
+        // Se escribe el Id de la empresa (E001) y se enseña su nombre.
+        new("Empresa", false, 18, CodigoEmpresa, AsignarEmpresa,
+            valor => CodigoId.Normalizar(valor, Empresa.PrefijoId),
+            (valor, _) => ValidarEmpresa(valor))
         {
-            Pantalla.MostrarAviso("Operación cancelada.");
-            return null;
-        }
+            Mostrar = NombreEmpresa,
+            Ayuda = MostrarEmpresasDisponibles,
+        },
 
-        List<Persona> coincidencias = servicio.Buscar(criterio);
+        new("Cargo", false, 14, p => p.Cargo, (p, valor) => p.Cargo = valor,
+            Validador.NormalizarTexto, Campo<Persona>.SinValidar),
+    };
 
-        if (coincidencias.Count == 0)
-        {
-            Pantalla.MostrarError($"No existe ninguna persona que coincida con \"{criterio}\".");
-            return null;
-        }
+    // ------------------------------------------------------------
+    //  Vínculo persona -> empresa
+    // ------------------------------------------------------------
 
-        if (coincidencias.Count == 1)
-            return coincidencias[0];
+    private static string CodigoEmpresa(Persona persona) =>
+        persona.IdEmpresa == null ? "" : CodigoId.Formatear(Empresa.PrefijoId, persona.IdEmpresa.Value);
 
-        Console.WriteLine($"Hay {coincidencias.Count} coincidencias:");
-        Tabla.Mostrar(coincidencias, columnasTabla);
-
-        string idEscrito = Pantalla.LeerTexto("Escribe el Id de la persona: ");
-        Persona? elegida = CodigoId.IntentarLeer(idEscrito, Persona.PrefijoId, out int id)
-            ? coincidencias.Find(p => p.Id == id)
-            : null;
-
-        if (elegida == null)
-            Pantalla.MostrarError("Ese Id no está entre las coincidencias.");
-
-        return elegida;
+    private static void AsignarEmpresa(Persona persona, string codigo)
+    {
+        persona.IdEmpresa = CodigoId.IntentarLeer(codigo, Empresa.PrefijoId, out int id) ? id : null;
     }
 
-    // Pide el nuevo valor, muestra "antes -> después" y solo guarda si se confirma.
-    private void CambiarCampo(Persona persona, CampoPersona campo)
+    private string? ValidarEmpresa(string codigo)
     {
-        string mensaje = campo.Obligatorio
-            ? $"Nuevo valor de {campo.Etiqueta}: "
-            : $"Nuevo valor de {campo.Etiqueta} (Enter para dejarlo vacío): ";
+        if (codigo == "")
+            return null;
 
-        string valorActual = campo.Obtener(persona);
-        string valorNuevo = PedirValor(campo, persona, mensaje);
+        if (!CodigoId.IntentarLeer(codigo, Empresa.PrefijoId, out int id))
+            return "Empresa: escribe un Id como E001, o deja el campo vacío.";
 
-        if (valorNuevo == valorActual)
+        return servicio.ComprobarEmpresaAsignable(id);
+    }
+
+    private string NombreEmpresa(Persona persona)
+    {
+        if (persona.IdEmpresa == null)
+            return "";
+
+        Empresa? empresa = servicioEmpresas.ObtenerActiva(persona.IdEmpresa.Value);
+        return empresa?.NombreComercial ?? CodigoEmpresa(persona);
+    }
+
+    private void MostrarEmpresasDisponibles()
+    {
+        List<Empresa> empresas = servicioEmpresas.ObtenerActivas();
+
+        if (empresas.Count == 0)
         {
-            Pantalla.MostrarAviso("El valor es el mismo; no hay nada que cambiar.");
+            Console.WriteLine("  (Todavía no hay empresas: deja el campo vacío.)");
             return;
         }
 
-        Console.WriteLine($"{campo.Etiqueta}: \"{Pantalla.TextoOGuion(valorActual)}\"  ->  \"{Pantalla.TextoOGuion(valorNuevo)}\"");
-
-        if (!Pantalla.LeerConfirmacion("¿Confirmas el cambio?"))
-        {
-            Pantalla.MostrarAviso("Cambio descartado.");
-            return;
-        }
-
-        // Se prueba el cambio sobre una copia: si el servicio lo rechaza, la persona no se altera.
-        Persona copia = persona.Clonar();
-        campo.Asignar(copia, valorNuevo);
-        Resultado resultado = servicio.Modificar(copia);
-
-        if (resultado.Correcto)
-        {
-            campo.Asignar(persona, campo.Obtener(copia));
-            Pantalla.MostrarExito($"{campo.Etiqueta} actualizado.");
-        }
-        else
-        {
-            Pantalla.MostrarErrores(resultado.Errores);
-        }
-    }
-
-    private static string PedirValor(CampoPersona campo, Persona persona, string mensaje) =>
-        Pantalla.LeerValorValido(mensaje, campo.Normalizar, valor => campo.Validar(valor, persona));
-
-    private void MostrarFicha(Persona persona)
-    {
-        string codigo = persona.Id == 0 ? "(se asigna al guardar)" : persona.Codigo;
-        Console.WriteLine($"  {"Id",-10}: {codigo}");
-
-        foreach (CampoPersona campo in campos)
-            Console.WriteLine($"  {campo.Etiqueta,-10}: {Pantalla.TextoOGuion(campo.Obtener(persona))}");
-    }
-
-    // ------------------------------------------------------------
-    //  Definición de campos y columnas
-    // ------------------------------------------------------------
-
-    private List<CampoPersona> CrearCampos()
-    {
-        // Validación para los campos opcionales: cualquier valor, incluso vacío, es correcto.
-        Func<string, Persona, string?> sinValidacion = (_, _) => null;
-
-        return new List<CampoPersona>
-        {
-            new("Nombre", true, 12, p => p.Nombre, (p, valor) => p.Nombre = valor,
-                ValidadorPersona.NormalizarTexto,
-                (valor, _) => ValidadorPersona.ValidarNombre(valor, "Nombre")),
-
-            new("Apellidos", true, 16, p => p.Apellidos, (p, valor) => p.Apellidos = valor,
-                ValidadorPersona.NormalizarTexto,
-                (valor, _) => ValidadorPersona.ValidarNombre(valor, "Apellidos")),
-
-            new("Teléfono", true, 13, p => p.Telefono, (p, valor) => p.Telefono = valor,
-                ValidadorPersona.NormalizarTelefono,
-                (valor, _) => ValidadorPersona.ValidarTelefono(valor)),
-
-            new("Correo", true, 26, p => p.Correo, (p, valor) => p.Correo = valor,
-                ValidadorPersona.NormalizarCorreo,
-                (valor, p) => ValidadorPersona.ValidarCorreo(valor) ?? servicio.ComprobarCorreoLibre(valor, p.Id)),
-
-            new("Empresa", false, 14, p => p.Empresa, (p, valor) => p.Empresa = valor,
-                ValidadorPersona.NormalizarTexto, sinValidacion),
-
-            new("Cargo", false, 14, p => p.Cargo, (p, valor) => p.Cargo = valor,
-                ValidadorPersona.NormalizarTexto, sinValidacion),
-        };
-    }
-
-    private List<Columna<Persona>> CrearColumnasTabla()
-    {
-        var columnas = new List<Columna<Persona>> { new("Id", 5, p => p.Codigo) };
-
-        columnas.AddRange(campos.Select(campo =>
-            new Columna<Persona>(campo.Etiqueta, campo.AnchoColumna, p => Pantalla.TextoOGuion(campo.Obtener(p)))));
-
-        return columnas;
+        Console.WriteLine("  Empresas disponibles:");
+        foreach (Empresa empresa in empresas)
+            Console.WriteLine($"    {empresa.Codigo} - {empresa.NombreComercial}");
     }
 }
