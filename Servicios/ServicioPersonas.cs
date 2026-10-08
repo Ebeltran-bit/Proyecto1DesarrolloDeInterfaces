@@ -10,10 +10,12 @@ namespace AgendaConsultora.Servicios;
 public class ServicioPersonas
 {
     private readonly IRepositorioPersonas repositorio;
+    private readonly IRepositorioEmpresas repositorioEmpresas;
 
-    public ServicioPersonas(IRepositorioPersonas repositorio)
+    public ServicioPersonas(IRepositorioPersonas repositorio, IRepositorioEmpresas repositorioEmpresas)
     {
         this.repositorio = repositorio;
+        this.repositorioEmpresas = repositorioEmpresas;
     }
 
     public List<Persona> ObtenerTodas() => OrdenarPorApellidos(repositorio.ObtenerTodas());
@@ -43,6 +45,20 @@ public class ServicioPersonas
         return $"Correo: ya pertenece a {duenio.Codigo} - {duenio.NombreCompleto}.";
     }
 
+    // Una persona solo se puede vincular a una empresa que exista y esté activa.
+    public string? ComprobarEmpresaAsignable(int? idEmpresa)
+    {
+        if (idEmpresa == null)
+            return null;
+
+        Empresa? empresa = repositorioEmpresas.ObtenerPorId(idEmpresa.Value);
+
+        if (empresa != null && empresa.EstaActiva)
+            return null;
+
+        return $"Empresa: no existe ninguna empresa activa con Id {CodigoId.Formatear(Empresa.PrefijoId, idEmpresa.Value)}.";
+    }
+
     public Resultado DarDeAlta(Persona persona)
     {
         Resultado resultado = Validar(persona);
@@ -68,15 +84,48 @@ public class ServicioPersonas
 
     public bool Eliminar(int id) => repositorio.Eliminar(id);
 
+    // ---------- Relación persona -> empresa ----------
+
+    // Plantilla de una empresa: sus personas, ordenadas por apellidos.
+    public List<Persona> ObtenerPorEmpresa(int idEmpresa) =>
+        OrdenarPorApellidos(repositorio.ObtenerPorEmpresa(idEmpresa));
+
+    public List<Persona> ObtenerSinEmpresa() =>
+        OrdenarPorApellidos(repositorio.ObtenerTodas().Where(p => p.IdEmpresa == null));
+
+    // Asigna o cambia la empresa de una persona. Ambas deben existir y la empresa estar activa.
+    public Resultado AsignarEmpresa(int idPersona, int idEmpresa)
+    {
+        Persona? persona = repositorio.ObtenerPorId(idPersona);
+        if (persona == null)
+            return Resultado.Error($"No existe la persona {CodigoId.Formatear(Persona.PrefijoId, idPersona)}.");
+
+        persona.IdEmpresa = idEmpresa;
+        return Modificar(persona);
+    }
+
+    // La persona conserva todos sus datos y se queda sin empresa asignada.
+    public Resultado Desvincular(int idPersona)
+    {
+        Persona? persona = repositorio.ObtenerPorId(idPersona);
+        if (persona == null)
+            return Resultado.Error($"No existe la persona {CodigoId.Formatear(Persona.PrefijoId, idPersona)}.");
+
+        if (persona.IdEmpresa == null)
+            return Resultado.Error($"{persona.Codigo} no tiene ninguna empresa asignada.");
+
+        persona.IdEmpresa = null;
+        return Modificar(persona);
+    }
+
     private Resultado Validar(Persona persona)
     {
         ValidadorPersona.Normalizar(persona);
 
         List<string> errores = ValidadorPersona.Validar(persona);
-
-        string? errorCorreo = ComprobarCorreoLibre(persona.Correo, persona.Id);
-        if (errorCorreo != null)
-            errores.Add(errorCorreo);
+        errores.AddRange(Validador.Reunir(
+            ComprobarCorreoLibre(persona.Correo, persona.Id),
+            ComprobarEmpresaAsignable(persona.IdEmpresa)));
 
         return Resultado.Desde(errores);
     }

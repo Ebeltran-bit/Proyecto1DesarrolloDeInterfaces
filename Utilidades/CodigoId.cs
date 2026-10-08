@@ -1,7 +1,7 @@
 namespace AgendaConsultora.Utilidades;
 
-// Convierte entre el Id numérico interno y el código que ve el usuario (P001 para personas,
-// E001 para empresas en la Fase 2).
+// Convierte entre el Id numérico interno y el código que ve el usuario
+// (P001 para personas, E001 para empresas).
 public static class CodigoId
 {
     public static string Formatear(string prefijo, int id) => $"{prefijo}{id:D3}";
@@ -21,4 +21,8 @@ public static class CodigoId
             && int.TryParse(numero, out id)
             && id > 0;
     }
+
+    // Deja el código en su forma estándar ("e1" -> "E001"). Si no es un código, devuelve el texto tal cual.
+    public static string Normalizar(string texto, string prefijo) =>
+        IntentarLeer(texto, prefijo, out int id) ? Formatear(prefijo, id) : texto.Trim();
 }

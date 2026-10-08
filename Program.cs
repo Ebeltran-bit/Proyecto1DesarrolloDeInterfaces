@@ -7,22 +7,25 @@ using AgendaConsultora.Servicios;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-// Almacenamiento elegido. En la Fase 2 basta con cambiar esta línea por el repositorio
-// de base de datos: servicios y menús no se enteran del cambio.
+// Almacenamiento elegido. Para pasar a base de datos basta con cambiar estas dos líneas
+// por los repositorios de BD: servicios y menús no se enteran del cambio.
 IRepositorioPersonas repositorioPersonas = new RepositorioPersonasMemoria();
+IRepositorioEmpresas repositorioEmpresas = new RepositorioEmpresasMemoria();
 
-var servicioPersonas = new ServicioPersonas(repositorioPersonas);
-DatosDeEjemplo.Cargar(servicioPersonas);
+var servicioPersonas = new ServicioPersonas(repositorioPersonas, repositorioEmpresas);
+var servicioEmpresas = new ServicioEmpresas(repositorioEmpresas, repositorioPersonas);
+DatosDeEjemplo.Cargar(servicioEmpresas, servicioPersonas);
 
-var menuPersonas = new MenuPersonas(servicioPersonas);
+var menuPersonas = new MenuPersonas(servicioPersonas, servicioEmpresas);
+var menuEmpresas = new MenuEmpresas(servicioEmpresas);
+var menuRelaciones = new MenuRelaciones(servicioPersonas, servicioEmpresas, menuPersonas, menuEmpresas);
 
+// Cada submenú vuelve aquí al elegir 0; la aplicación solo termina al salir de este menú.
 var menuPrincipal = new Menu("AGENDA DE LA CONSULTORA", "Salir", new List<OpcionMenu>
 {
-    new(1, "Dar de alta una persona", menuPersonas.DarDeAlta),
-    new(2, "Listar personas", menuPersonas.Listar),
-    new(3, "Buscar persona", menuPersonas.Buscar),
-    new(4, "Modificar persona", menuPersonas.Modificar),
-    new(5, "Dar de baja una persona", menuPersonas.DarDeBaja),
+    new(1, "Gestión de personas", menuPersonas.Ejecutar),
+    new(2, "Gestión de empresas", menuEmpresas.Ejecutar),
+    new(3, "Relaciones persona - empresa", menuRelaciones.Ejecutar),
 });
 
 menuPrincipal.Ejecutar();

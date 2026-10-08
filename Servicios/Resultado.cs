@@ -13,6 +13,8 @@ public class Resultado
         Errores = errores;
     }
 
+    public static Resultado Ok() => new(new List<string>());
+
     // Sin errores = operación correcta.
     public static Resultado Desde(IEnumerable<string> errores) => new(errores.ToList());
 
