@@ -84,6 +84,40 @@ public class ServicioPersonas
 
     public bool Eliminar(int id) => repositorio.Eliminar(id);
 
+    // ---------- Relación persona -> empresa ----------
+
+    // Plantilla de una empresa: sus personas, ordenadas por apellidos.
+    public List<Persona> ObtenerPorEmpresa(int idEmpresa) =>
+        OrdenarPorApellidos(repositorio.ObtenerPorEmpresa(idEmpresa));
+
+    public List<Persona> ObtenerSinEmpresa() =>
+        OrdenarPorApellidos(repositorio.ObtenerTodas().Where(p => p.IdEmpresa == null));
+
+    // Asigna o cambia la empresa de una persona. Ambas deben existir y la empresa estar activa.
+    public Resultado AsignarEmpresa(int idPersona, int idEmpresa)
+    {
+        Persona? persona = repositorio.ObtenerPorId(idPersona);
+        if (persona == null)
+            return Resultado.Error($"No existe la persona {CodigoId.Formatear(Persona.PrefijoId, idPersona)}.");
+
+        persona.IdEmpresa = idEmpresa;
+        return Modificar(persona);
+    }
+
+    // La persona conserva todos sus datos y se queda sin empresa asignada.
+    public Resultado Desvincular(int idPersona)
+    {
+        Persona? persona = repositorio.ObtenerPorId(idPersona);
+        if (persona == null)
+            return Resultado.Error($"No existe la persona {CodigoId.Formatear(Persona.PrefijoId, idPersona)}.");
+
+        if (persona.IdEmpresa == null)
+            return Resultado.Error($"{persona.Codigo} no tiene ninguna empresa asignada.");
+
+        persona.IdEmpresa = null;
+        return Modificar(persona);
+    }
+
     private Resultado Validar(Persona persona)
     {
         ValidadorPersona.Normalizar(persona);

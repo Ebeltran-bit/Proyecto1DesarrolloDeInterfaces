@@ -178,9 +178,12 @@ public abstract class MenuEntidad<T> where T : class, IEntidad<T>
         return elegida;
     }
 
-    protected void MostrarTabla(IEnumerable<T> elementos) => Tabla.Mostrar(elementos, Columnas);
+    // Para otros menús (relaciones): elegir un registro por Id o texto.
+    public T? Seleccionar() => Localizar(BuscarCoincidencias);
 
-    protected void MostrarFicha(T entidad)
+    public void MostrarTabla(IEnumerable<T> elementos) => Tabla.Mostrar(elementos, Columnas);
+
+    public void MostrarFicha(T entidad)
     {
         string codigo = entidad.Id == 0 ? "(se asigna al guardar)" : entidad.Codigo;
         Console.WriteLine($"  {"Id".PadRight(AnchoEtiquetas)} : {codigo}");

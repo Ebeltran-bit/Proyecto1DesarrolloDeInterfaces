@@ -54,10 +54,11 @@ public class MenuEmpresas : MenuEntidad<Empresa>
         List<Persona> vinculadas = servicio.ObtenerPersonas(empresa.Id);
         if (vinculadas.Count > 0)
         {
-            Pantalla.MostrarError($"No se puede dar de baja: tiene {vinculadas.Count} persona(s) vinculada(s).");
+            Pantalla.MostrarError($"No se puede dar de baja {Describir(empresa)}: tiene {vinculadas.Count} persona(s) vinculada(s).");
             foreach (Persona persona in vinculadas)
                 Console.WriteLine($"    {persona.Codigo} - {persona.NombreCompleto}");
-            Console.WriteLine("Cámbialas de empresa o elimínalas antes desde el menú de personas.");
+            Pantalla.MostrarAviso("Política: una empresa con personas no se puede borrar. Desvincúlalas o cámbialas " +
+                                  "de empresa antes (menú principal -> 3. Relaciones persona - empresa).");
             return;
         }
 

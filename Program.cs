@@ -18,12 +18,14 @@ DatosDeEjemplo.Cargar(servicioEmpresas, servicioPersonas);
 
 var menuPersonas = new MenuPersonas(servicioPersonas, servicioEmpresas);
 var menuEmpresas = new MenuEmpresas(servicioEmpresas);
+var menuRelaciones = new MenuRelaciones(servicioPersonas, servicioEmpresas, menuPersonas, menuEmpresas);
 
 // Cada submenú vuelve aquí al elegir 0; la aplicación solo termina al salir de este menú.
 var menuPrincipal = new Menu("AGENDA DE LA CONSULTORA", "Salir", new List<OpcionMenu>
 {
     new(1, "Gestión de personas", menuPersonas.Ejecutar),
     new(2, "Gestión de empresas", menuEmpresas.Ejecutar),
+    new(3, "Relaciones persona - empresa", menuRelaciones.Ejecutar),
 });
 
 menuPrincipal.Ejecutar();

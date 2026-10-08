@@ -1,4 +1,4 @@
-# Agenda de la consultora — Fases 1 y 2: personas y empresas
+# Agenda de la consultora — Fases 1 a 3: personas, empresas y su relación
 
 Aplicación de consola en C# para dar de alta, listar, buscar, modificar y dar de baja personas y empresas,
 con un menú principal y un submenú para cada una.
@@ -148,6 +148,49 @@ Arranca con 3 empresas (E001–E003) y 4 personas. E003 no tiene personas vincul
 8. **Recuperar (6):** `E003` → confirmar. **Listar (2):** vuelve a aparecer.
 9. **Personas → Alta (1):** al llegar a Empresa se listan las disponibles; escribe `E004`.
 
+## Fase 3: relación persona - empresa
+
+Una persona tiene **cero o una** empresa; una empresa tiene **cero, una o muchas** personas (relación 1:N).
+Se guarda en `Persona.IdEmpresa` (`null` = sin empresa).
+
+Menú principal → `3. Relaciones persona - empresa` (`Interfaz/MenuRelaciones.cs`):
+
+| Operación | Comportamiento | Dónde |
+|---|---|---|
+| Asignar o cambiar empresa | Se elige una persona y una empresa activa por su Id (o texto). Pide confirmación. | Opción 1 · `ServicioPersonas.AsignarEmpresa` |
+| Desvincular persona | La persona conserva sus datos y queda sin empresa. Pide confirmación. | Opción 2 · `ServicioPersonas.Desvincular` |
+| Ver empresa de una persona | Muestra la ficha de su empresa, o avisa si no tiene. También sale en la columna Empresa del listado de personas. | Opción 3 |
+| Ver personas de una empresa | Lista la plantilla de la empresa elegida. | Opción 4 · `ServicioPersonas.ObtenerPorEmpresa` |
+| Resumen | Cada empresa activa con sus personas, y al final las personas sin empresa. | Opción 5 |
+| Borrar empresa relacionada | **No se permite**: muestra `[ERROR]` con las personas vinculadas y la política. | Empresas → 5 · `ServicioEmpresas.DarDeBaja` |
+
+### Política de borrado elegida
+
+**Una empresa con personas no se puede borrar** (equivale a `ON DELETE RESTRICT`). Hay que desvincular o
+cambiar de empresa a sus personas antes. Motivo: borrarla en cascada eliminaría contactos válidos, y dejarlos
+sin empresa en silencio perdería información sin que el usuario lo decida. Así cada cambio es explícito
+y confirmado. La comprobación está en el servicio, de modo que ninguna interfaz futura puede saltársela.
+
+Mensaje que muestra la consola:
+
+```
+[ERROR] No se puede dar de baja E001 - TechSolutions S.L.: tiene 2 persona(s) vinculada(s).
+    P001 - Laura Martínez Ruiz
+    P003 - Ana Fernández Gil
+[AVISO] Política: una empresa con personas no se puede borrar. Desvincúlalas o cámbialas de empresa antes (menú principal -> 3. Relaciones persona - empresa).
+```
+
+### Guion para la demostración
+
+1. **Relaciones → 5:** resumen inicial (E001 con 2 personas, E002 con 1, E003 con 0, Javier sin empresa).
+2. **Empresas → 5:** intenta borrar `E001` → `[ERROR]` con sus personas y la política.
+3. **Relaciones → 1:** asigna `P004` (Javier) a `E003`.
+4. **Relaciones → 1:** cambia `P001` (Laura) de `E001` a `E002`.
+5. **Relaciones → 2:** desvincula `P003` (Ana) → `E001` queda sin personas.
+6. **Relaciones → 3:** empresa de `P001` → ficha de E002. **Relaciones → 4:** personas de `E002`.
+7. **Empresas → 5:** ahora `E001` sí se puede dar de baja.
+8. **Relaciones → 5:** resumen final.
+
 ## Modelo de datos previsto (para cuando se pida base de datos)
 
 > Esquema orientativo. Se ajustará cuando se conozca el motor de base de datos; la sintaxis del
@@ -215,7 +258,7 @@ CREATE TABLE Personas (
     Correo     VARCHAR(100) NOT NULL UNIQUE,
     Cargo      VARCHAR(50)  NULL,
     IdEmpresa  INTEGER      NULL,
-    FOREIGN KEY (IdEmpresa) REFERENCES Empresas(IdEmpresa)
+    FOREIGN KEY (IdEmpresa) REFERENCES Empresas(IdEmpresa) ON DELETE RESTRICT
 );
 
 -- Consulta final del proyecto: qué personas pertenecen a cada empresa
