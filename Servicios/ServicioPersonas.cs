@@ -22,16 +22,9 @@ public class ServicioPersonas
 
     // Si el criterio tiene forma de código (P3, p003) busca por Id;
     // si no, busca el texto dentro de nombre y apellidos.
-    public List<Persona> Buscar(string criterio)
-    {
-        if (CodigoId.IntentarLeer(criterio, Persona.PrefijoId, out int id))
-        {
-            Persona? persona = repositorio.ObtenerPorId(id);
-            return persona == null ? new List<Persona>() : new List<Persona> { persona };
-        }
-
-        return OrdenarPorApellidos(repositorio.BuscarPorNombre(criterio.Trim()));
-    }
+    public List<Persona> Buscar(string criterio) =>
+        OrdenarPorApellidos(Busqueda.PorCodigoOTexto<Persona>(
+            criterio, Persona.PrefijoId, repositorio.ObtenerPorId, repositorio.BuscarPorNombre));
 
     // idPropio es el de la persona que se está editando (0 en un alta),
     // para que su propio correo no cuente como repetido.

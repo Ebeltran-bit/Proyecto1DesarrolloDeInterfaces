@@ -1,4 +1,4 @@
-# Agenda de la consultora — Fases 1 a 3: personas, empresas y su relación
+# Agenda de la consultora — Fases 1 a 4
 
 Aplicación de consola en C# para dar de alta, listar, buscar, modificar y dar de baja personas y empresas,
 con un menú principal y un submenú para cada una.
@@ -190,6 +190,41 @@ Mensaje que muestra la consola:
 6. **Relaciones → 3:** empresa de `P001` → ficha de E002. **Relaciones → 4:** personas de `E002`.
 7. **Empresas → 5:** ahora `E001` sí se puede dar de baja.
 8. **Relaciones → 5:** resumen final.
+
+## Fase 4: organización mediante funciones
+
+El programa se refactoriza sin cambiar lo que hace. Cada responsabilidad está en una función con un nombre
+que explica qué hace, separando **presentación de menús**, **lectura y validación de datos** y **operaciones de gestión**.
+
+### Reparto de responsabilidades de las funciones principales
+
+| Bloque | Función | Responsabilidad | Recibe → Devuelve |
+|---|---|---|---|
+| **Coordinación** | `Program.cs` (main) | Crea repositorios, servicios y menús, los conecta y arranca el menú principal. No tiene lógica. | — |
+| **Presentación de menús** | `Menu.Ejecutar` | Muestra un menú numerado y ejecuta la opción elegida hasta que se pulsa 0. | opciones → nada |
+| | `MenuEntidad.DarDeAlta / Listar / Buscar / Modificar` | Pantallas comunes a personas y empresas (escritas una sola vez). | — |
+| | `MenuEntidad.Localizar` | Pide un Id o texto y devuelve un único registro, o `null` si no existe. La usan modificar, baja y relaciones. | función de búsqueda → `T?` |
+| | `MenuEntidad.MostrarFicha / MostrarTabla` | Presentan uno o varios registros. | registro(s) → nada |
+| | `MenuPersonas.DarDeBaja`, `MenuEmpresas.DarDeBaja / Recuperar`, `MenuRelaciones.*` | Pantallas propias de cada bloque. | — |
+| **Lectura y validación** | `Pantalla.LeerEntero` | Repite la pregunta hasta recibir un número. | mensaje → `int` |
+| | `Pantalla.LeerOpcion` | **Pide una opción válida** de un menú; la usan todos los menús. | mensaje, opciones válidas → `int` |
+| | `Pantalla.LeerConfirmacion` | Solo acepta S/SI/SÍ o N/NO. | pregunta → `bool` |
+| | `Pantalla.LeerValorValido` | Pide un dato, lo normaliza y lo valida hasta que es correcto. | mensaje, normalizar, validar → `string` |
+| | `Validador.ValidarTelefono / ValidarCorreo / ValidarObligatorio`, `ValidadorEmpresa.ValidarCif`… | Comprueban el formato de un dato. No leen ni escriben. | valor → `string?` (error o `null`) |
+| | `Pantalla.MostrarExito / MostrarError / MostrarAviso` | Mensajes `[OK]`, `[ERROR]`, `[AVISO]` con color. | mensaje → nada |
+| **Operaciones de gestión** | `ServicioPersonas.DarDeAlta / Modificar / Eliminar` | Validan y guardan personas (correo único, empresa activa). | `Persona` → `Resultado` |
+| | `ServicioPersonas.AsignarEmpresa / Desvincular` | Gestionan la relación persona → empresa. | Ids → `Resultado` |
+| | `ServicioEmpresas.DarDeAlta / Modificar / DarDeBaja / Recuperar` | Validan y guardan empresas; la baja se bloquea si tiene personas. | `Empresa` o Id → `Resultado` |
+| | `Busqueda.PorCodigoOTexto` | **Búsqueda reutilizable por Id o texto**, común a personas y empresas. | criterio, prefijo, buscar por Id, buscar por texto → `List<T>` |
+| | `CodigoId.Formatear / IntentarLeer` | Convierte entre el Id numérico y el código `P001`/`E001`. | — |
+| **Datos** | `Repositorio*.Agregar / Actualizar / Eliminar / ObtenerPorId` | Guardan y recuperan registros. | — |
+
+### Criterios aplicados
+
+- **Sin variables globales:** `Program` crea los objetos como variables locales y se los pasa por constructor a quien los necesita.
+- **Parámetros y retornos coherentes:** las validaciones devuelven el error (`string?`, `null` = correcto); las operaciones devuelven
+  `Resultado` (correcto o lista de errores); las búsquedas devuelven `List<T>` (vacía si no hay nada); las lecturas devuelven el valor ya validado.
+- **Sin duplicados:** `LeerOpcion` para cualquier menú, `Busqueda.PorCodigoOTexto` para buscar por Id o texto, `MenuEntidad<T>` para las pantallas comunes.
 
 ## Modelo de datos previsto (para cuando se pida base de datos)
 

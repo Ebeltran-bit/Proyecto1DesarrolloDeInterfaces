@@ -109,23 +109,9 @@ public class ServicioEmpresas
 
     // Si el criterio tiene forma de código (E3, e003) busca por Id;
     // si no, busca el texto en el nombre comercial o el CIF.
-    private List<Empresa> Buscar(string criterio, EstadoEmpresa estado)
-    {
-        var encontradas = new List<Empresa>();
-
-        if (CodigoId.IntentarLeer(criterio, Empresa.PrefijoId, out int id))
-        {
-            Empresa? empresa = repositorio.ObtenerPorId(id);
-            if (empresa != null)
-                encontradas.Add(empresa);
-        }
-        else
-        {
-            encontradas = repositorio.BuscarPorTexto(criterio.Trim());
-        }
-
-        return ConEstado(encontradas, estado);
-    }
+    private List<Empresa> Buscar(string criterio, EstadoEmpresa estado) =>
+        ConEstado(Busqueda.PorCodigoOTexto<Empresa>(
+            criterio, Empresa.PrefijoId, repositorio.ObtenerPorId, repositorio.BuscarPorTexto), estado);
 
     private Resultado Validar(Empresa empresa)
     {

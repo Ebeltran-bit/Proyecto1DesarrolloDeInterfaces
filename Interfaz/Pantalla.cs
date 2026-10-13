@@ -32,6 +32,20 @@ public static class Pantalla
         }
     }
 
+    // Pide una opción hasta que sea una de las válidas. La usan todos los menús.
+    public static int LeerOpcion(string mensaje, IReadOnlyCollection<int> opcionesValidas)
+    {
+        while (true)
+        {
+            int opcion = LeerEntero(mensaje);
+
+            if (opcionesValidas.Contains(opcion))
+                return opcion;
+
+            MostrarError($"Esa opción no existe. Elige una de estas: {string.Join(", ", opcionesValidas.Order())}.");
+        }
+    }
+
     public static bool LeerConfirmacion(string pregunta)
     {
         while (true)

@@ -10,7 +10,7 @@ public record OpcionMenu(int Numero, Func<string> Texto, Action Accion)
     }
 }
 
-// Menú numerado reutilizable: se repite hasta elegir 0 y avisa si la opción no existe.
+// Menú numerado reutilizable: se repite hasta elegir 0. La validación de la opción la hace Pantalla.LeerOpcion.
 public class Menu
 {
     private readonly string titulo;
@@ -29,20 +29,18 @@ public class Menu
         while (true)
         {
             MostrarOpciones();
-            int eleccion = Pantalla.LeerEntero("Elige una opción: ");
+            int eleccion = Pantalla.LeerOpcion("Elige una opción: ", NumerosValidos());
             Console.WriteLine();
 
             if (eleccion == 0)
                 return;
 
-            OpcionMenu? opcion = opciones.Find(o => o.Numero == eleccion);
-
-            if (opcion == null)
-                Pantalla.MostrarError($"Esa opción no existe. Elige un número del 0 al {opciones.Count}.");
-            else
-                opcion.Accion();
+            opciones.First(o => o.Numero == eleccion).Accion();
         }
     }
+
+    // El 0 (salir o volver) siempre es válido.
+    private List<int> NumerosValidos() => opciones.Select(o => o.Numero).Prepend(0).ToList();
 
     private void MostrarOpciones()
     {
