@@ -2,3 +2,6 @@ bin/
 obj/
 *.user
 .vs/
+
+# Datos locales de la agenda (se crean al ejecutar; cada uno tiene los suyos)
+datos/

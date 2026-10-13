@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Espacio de nombres raíz sin ".Console" para no tapar a System.Console -->
+    <RootNamespace>AgendaProfesional</RootNamespace>
+    <AssemblyName>AgendaProfesional</AssemblyName>
+  </PropertyGroup>
+
+</Project>

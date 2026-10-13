@@ -1,71 +1,160 @@
-# Agenda de la consultora — Fases 1 a 4
+# Agenda Profesional
 
-Aplicación de consola en C# para dar de alta, listar, buscar, modificar y dar de baja personas y empresas,
-con un menú principal y un submenú para cada una.
+Aplicación de consola en C# (.NET 10) para que una consultora gestione las personas de contacto y las empresas con
+las que colabora: alta, listado, búsqueda, modificación y baja de ambas, y la relación entre ellas (una persona
+pertenece a cero o una empresa; una empresa tiene cero, una o muchas personas). Los datos se guardan en un archivo JSON.
 
 ## Cómo ejecutarla
 
-**Desde la terminal de VS Code**, en la carpeta `Proyecto1`:
+Desde la carpeta raíz del repositorio:
 
 ```bash
-dotnet run
+dotnet build
+dotnet run --project src/AgendaProfesional.Console
 ```
 
-Se recomienda `dotnet run` en la terminal integrada: si se lanza con F5, la configuración de depuración
-debe usar `"console": "integratedTerminal"`, porque la consola de depuración de VS Code no permite escribir.
+- Los datos se guardan en `datos/agenda.json` (dentro de la carpeta desde la que se ejecuta). La primera vez, si no
+  existe, se crea con datos de ejemplo. **Para volver a los datos de ejemplo, borra ese archivo.**
+- `dotnet run --project src/AgendaProfesional.Console -- --sin-archivo` trabaja solo en memoria, sin leer ni guardar nada.
+- En VS Code abre la carpeta raíz: la extensión C# Dev Kit detecta `AgendaProfesional.sln`.
 
-Requisitos: .NET SDK 10 (`dotnet --version`).
+Requisitos: .NET SDK 10.
 
-## Estructura
-
-El código está organizado en capas. Cada una solo conoce a la de debajo:
-
-```
-Interfaz  →  Servicios  →  Datos
-   (consola)   (reglas)      (almacenamiento)
-        \          |          /
-         └──── Modelos ──────┘
-```
+## Estructura (Fase 5)
 
 ```
-Proyecto1/
-├── Proyecto1.csproj
-├── Program.cs                        Crea las piezas, las conecta y arranca el menú
-├── Modelos/
-│   └── Persona.cs                    Datos de una persona
-├── Datos/
-│   ├── IRepositorioPersonas.cs       Contrato de almacenamiento
-│   ├── RepositorioPersonasMemoria.cs Implementación con List<Persona>
-│   └── DatosDeEjemplo.cs             4 personas para la demo
-├── Servicios/
-│   ├── ServicioPersonas.cs           Alta, búsqueda, modificación, baja, correo único
-│   ├── ValidadorPersona.cs           Formato y normalización de cada dato
-│   └── Resultado.cs                  Éxito o lista de errores de una operación
-├── Interfaz/
-│   ├── Menu.cs                       Menú numerado reutilizable (+ OpcionMenu)
-│   ├── MenuPersonas.cs               Pantallas de alta, listado, búsqueda, modificación y baja
-│   ├── Campo.cs                      Descripción de cada dato (etiqueta, validación, ancho…)
-│   ├── Tabla.cs                      Dibuja cualquier lista como tabla alineada
-│   └── Pantalla.cs                   Lectura validada y mensajes [OK] / [ERROR] / [AVISO]
-└── Utilidades/
-    ├── CodigoId.cs                   Id numérico ⇄ código P001
-    └── Texto.cs                      Búsqueda sin mayúsculas ni tildes
+AgendaProfesional/
+├── README.md
+├── AgendaProfesional.sln
+└── src/
+    └── AgendaProfesional.Console/
+        ├── AgendaProfesional.Console.csproj
+        ├── Program.cs                  Punto de entrada: crea las piezas y arranca la consola
+        ├── Models/
+        │   ├── Persona.cs              Datos de una persona y su IdEmpresa opcional
+        │   ├── Empresa.cs              Datos de una empresa y su Estado (0 baja / 1 activa)
+        │   └── IEntidad.cs             Lo común a ambas (Id, Codigo, Clonar)
+        ├── Services/
+        │   ├── AgendaService.cs        Operaciones de negocio
+        │   ├── Resultado.cs            Éxito o lista de errores de una operación
+        │   └── DatosDeEjemplo.cs       Datos iniciales para la demo
+        ├── Infrastructure/
+        │   ├── IRepositorios.cs        Contratos de acceso a datos
+        │   ├── RepositorioBase.cs      Alta, modificación, baja y consultas comunes
+        │   ├── RepositorioPersonas.cs  Consultas propias de personas
+        │   ├── RepositorioEmpresas.cs  Consultas propias de empresas
+        │   ├── ContextoAgenda.cs       Carga, comprueba la consistencia y guarda tras cada cambio
+        │   ├── DatosAgenda.cs          Lo que se guarda en el archivo
+        │   ├── IAlmacenAgenda.cs       Dónde se guarda
+        │   ├── AlmacenJson.cs          En un archivo JSON (escritura segura)
+        │   └── AlmacenMemoria.cs       Solo en memoria (pruebas)
+        ├── UI/
+        │   ├── ConsoleUI.cs            Menú principal y avisos de inicio
+        │   ├── PantallaEntidad.cs      Alta, listado, búsqueda y modificación comunes
+        │   ├── PantallaPersonas.cs     Campos y baja de personas
+        │   ├── PantallaEmpresas.cs     Campos, baja lógica y recuperación de empresas
+        │   ├── PantallaRelaciones.cs   Asignar, desvincular y consultas de la relación
+        │   └── Componentes/            Menu, Tabla, Campo y Consola (lectura y mensajes)
+        └── Utils/
+            ├── InputValidator.cs       Reglas de formato y normalización de los datos
+            ├── CodigoId.cs             Id numérico ⇄ código P001 / E001
+            ├── Busqueda.cs             Búsqueda por Id o por texto
+            └── Texto.cs                Comparación sin mayúsculas ni tildes
 ```
 
-## Decisiones de diseño
+## Fase 5: modelo orientado a objetos y responsabilidades
+
+```
+Program ──crea──> ConsoleUI ──usa──> AgendaService ──usa──> IRepositorios ──implementa──> Infrastructure (JSON)
+                      │                    │                                                  │
+                      └────────────────────┴──────────── Models (Persona, Empresa) ───────────┘
+                                 Utils (InputValidator, CodigoId...) lo usan todas las capas
+```
+
+| Componente | Responsabilidad |
+|---|---|
+| **Persona** | Datos de una persona y su empresa asignada mediante `IdEmpresa` opcional (`int?`). |
+| **Empresa** | Datos de una empresa y su `Estado` (baja lógica). |
+| **AgendaService** | Operaciones de negocio: altas, búsquedas, modificaciones, asignaciones, bajas y consultas. Aplica las reglas (validación, correo y CIF únicos, empresa activa, no borrar empresas con personas). No escribe en pantalla ni sabe cómo se guardan los datos. |
+| **ConsoleUI** | Muestra los menús, pide los datos y presenta los resultados. **No toca las colecciones**: todo lo pide a `AgendaService`. Delega cada bloque en `PantallaPersonas`, `PantallaEmpresas` y `PantallaRelaciones`. |
+| **Program** | Punto de entrada: crea el almacén, los repositorios, el servicio y la consola, y arranca. Unas 20 líneas, sin lógica. |
+| **InputValidator** | Reglas de formato de cada dato. Las usan la consola (al teclear) y el servicio (antes de guardar): las reglas están en un solo sitio. |
+| **Infrastructure** | Persistencia aislada: repositorios, contexto y almacén JSON. Ni los menús ni el servicio saben que hay un archivo. |
+
+### Persistencia en JSON (capa Infrastructure)
+
+Toda la agenda se guarda en **un único archivo** `datos/agenda.json`:
+
+```json
+{
+  "UltimoIdPersona": 4,
+  "UltimoIdEmpresa": 3,
+  "Personas": [
+    { "Id": 1, "Nombre": "Laura", "Apellidos": "Martínez Ruiz", "Telefono": "612345678",
+      "Correo": "laura.martinez@techsolutions.es", "IdEmpresa": 1, "Cargo": "Jefa de proyecto" }
+  ],
+  "Empresas": [
+    { "Id": 1, "NombreComercial": "TechSolutions S.L.", "Cif": "B12345678", "Telefono": "912345678",
+      "Correo": "info@techsolutions.es", "Direccion": "Calle Mayor 10, Madrid", "Estado": 1 }
+  ]
+}
+```
 
 | Decisión | Justificación |
 |---|---|
-| **Capas separadas** (Modelos, Datos, Servicios, Interfaz) | Cada clase tiene una sola responsabilidad. Solo `Interfaz` usa `Console`, así que la lógica podrá reutilizarse cuando la aplicación tenga interfaz gráfica o web. |
-| **Repositorio con interfaz** (`IRepositorioPersonas`) | Servicios y menús no saben dónde se guardan los datos. En la Fase 2 se añade `RepositorioPersonasBD` y solo cambia una línea de `Program.cs`. |
-| **El repositorio en memoria trabaja con copias** | Se comporta como una base de datos: modificar un objeto no guarda nada hasta llamar a `Actualizar`. Así el código ya está escrito como funcionará con BD. |
-| **Id `int` interno, código `P001` visible** | En una BD el Id será un entero autoincremental. `P001` es solo cómo se muestra y se busca. El contador solo avanza: un Id borrado nunca se reasigna, y no depende del nombre. |
-| **Validación en el servicio** | Aunque la consola valida cada dato al escribirlo, el servicio vuelve a validar antes de guardar. Ninguna interfaz futura puede guardar datos incorrectos. |
-| **`Resultado`** en vez de mensajes por pantalla | El servicio devuelve los errores y cada interfaz decide cómo mostrarlos. |
-| **`Campo<T>`: cada dato definido una sola vez** | Alta, ficha, tabla y menú de modificar se generan a partir de la misma lista. Añadir un campo es añadir una línea en `MenuPersonas.CrearCampos()`. |
-| **`Menu` y `Tabla` genéricos** | Sirven para el menú principal, el submenú de modificar y, en la Fase 2, para empresas. |
-| Campo añadido: **Cargo** | En una agenda de consultora interesa saber el rol de cada contacto. Es opcional. |
-| Empresa opcional | En la Fase 1 era texto libre; desde la Fase 2 es el `IdEmpresa` de una empresa activa. |
+| **Un solo archivo** para personas y empresas | Se guardan juntas, así nunca queda una persona apuntando a una empresa de otro archivo que no llegó a guardarse. |
+| **Contadores de Id en el archivo** | Un Id borrado no se reutiliza aunque se cierre el programa, igual que un autoincremental de base de datos. |
+| **`ContextoAgenda` (unidad de trabajo)** | Carga los datos una vez, los repositorios trabajan sobre él y guarda después de cada cambio. Es el mismo papel que tendría un `DbContext` con base de datos. |
+| **Escritura segura** | Se escribe en `agenda.json.tmp` y después sustituye al original: si el programa se corta a mitad, el archivo bueno sigue intacto. |
+| **Si no se puede guardar** (archivo bloqueado, sin permisos) | Se muestra `[ERROR]` y se vuelve al menú; el programa no termina. |
+| **`AlmacenMemoria`** | Misma interfaz sin archivo, para pruebas (`--sin-archivo`). |
+
+### Comprobaciones de consistencia al cargar
+
+`ContextoAgenda` revisa el archivo al arrancar (por si se editó a mano) y muestra un `[AVISO]` por cada problema:
+
+| Problema | Qué se hace |
+|---|---|
+| JSON dañado o vacío | Se aparta como `agenda.json.danado-FECHA` (no se borra) y se empieza con datos de ejemplo. |
+| Contador de Id por debajo del Id más alto | Se ajusta, para que no se repitan Ids. |
+| Id repetido o no válido | Se le asigna un Id nuevo. |
+| Persona apuntando a una empresa inexistente o dada de baja | Se queda sin empresa. |
+| Datos con formato incorrecto (correo, CIF…) | No se tocan; solo se avisa. |
+
+Si hubo reparaciones, el archivo se vuelve a guardar ya corregido.
+
+**Pruebas sugeridas:** con el programa cerrado, edita `datos/agenda.json` y cambia un `IdEmpresa` a `99`, repite un `Id`,
+pon un correo sin `@` o borra una llave para romper el JSON. Al arrancar verás el aviso correspondiente.
+
+### Equivalencia de nombres (Fases 1-4 → Fase 5)
+
+Las secciones de las fases anteriores describen el código de su momento. En la Fase 5 se reorganizó así
+(con `git mv`, de modo que el historial de cada archivo se conserva):
+
+| Antes | Ahora |
+|---|---|
+| `Proyecto1.csproj` | `src/AgendaProfesional.Console/AgendaProfesional.Console.csproj` + `AgendaProfesional.sln` |
+| `Modelos/` | `Models/` |
+| `Datos/IRepositorio*.cs` | `Infrastructure/IRepositorios.cs` |
+| `Datos/RepositorioMemoria.cs`, `Repositorio*Memoria.cs` | `Infrastructure/RepositorioBase.cs`, `RepositorioPersonas.cs`, `RepositorioEmpresas.cs` (ahora guardan en JSON a través de `ContextoAgenda`) |
+| `Servicios/ServicioPersonas.cs` + `ServicioEmpresas.cs` | `Services/AgendaService.cs` (un único servicio) |
+| `Servicios/Validador.cs` + `ValidadorPersona.cs` + `ValidadorEmpresa.cs` | `Utils/InputValidator.cs` |
+| `Interfaz/Pantalla.cs` | `UI/Componentes/Consola.cs` |
+| `Interfaz/MenuEntidad.cs`, `MenuPersonas.cs`, `MenuEmpresas.cs`, `MenuRelaciones.cs` | `UI/PantallaEntidad.cs`, `PantallaPersonas.cs`, `PantallaEmpresas.cs`, `PantallaRelaciones.cs` |
+| (menú principal en `Program.cs`) | `UI/ConsoleUI.cs` |
+| `Utilidades/` | `Utils/` |
+
+## Decisiones de diseño generales
+
+| Decisión | Justificación |
+|---|---|
+| **Id `int` interno, código `P001` / `E001` visible** | Como un autoincremental de BD. El código es solo cómo se muestra y se busca; no depende del nombre. |
+| **Los repositorios trabajan con copias** | Modificar un objeto no guarda nada hasta llamar a `Actualizar`, igual que con una base de datos. |
+| **Validación en el servicio** | La consola valida cada dato al escribirlo, pero el servicio vuelve a validar antes de guardar: ninguna interfaz futura puede guardar datos incorrectos. |
+| **`Resultado`** en vez de mensajes por pantalla | El servicio devuelve los errores y la interfaz decide cómo mostrarlos. |
+| **`Campo<T>`: cada dato definido una sola vez** | Alta, ficha, tabla y menú de modificar se generan a partir de la misma lista. |
+| **`PantallaEntidad<T>`, `RepositorioBase<T>`, `Menu`, `Tabla`** | Código común escrito una vez para personas y empresas. |
+| Campo añadido: **Cargo** | En una agenda de consultora interesa el rol de cada contacto. Es opcional. |
 | Menú sin limpiar pantalla | Toda la ejecución queda en la terminal, útil para las capturas de evidencia. |
 
 ## Validaciones
@@ -93,6 +182,9 @@ El programa arranca con 4 personas de ejemplo (P001–P004).
 5. **Modificar (4):** primero `P099` → no existe. Vuelve a entrar y busca `ez` → varias coincidencias; elige `P002`, opción 3 (teléfono), confirma y termina con `0`.
 6. **Baja (5):** elimina `P004` confirmando con `S`.
 7. **Listar (2)** y **Salir (0)**.
+
+> Las secciones siguientes documentan cada fase tal como se entregó. Los nombres de archivo de las Fases 1 a 4
+> corresponden a la estructura anterior; consulta la tabla «Equivalencia de nombres» de la Fase 5.
 
 ## Fase 2: gestión de empresas
 
@@ -226,7 +318,7 @@ que explica qué hace, separando **presentación de menús**, **lectura y valida
   `Resultado` (correcto o lista de errores); las búsquedas devuelven `List<T>` (vacía si no hay nada); las lecturas devuelven el valor ya validado.
 - **Sin duplicados:** `LeerOpcion` para cualquier menú, `Busqueda.PorCodigoOTexto` para buscar por Id o texto, `MenuEntidad<T>` para las pantallas comunes.
 
-## Modelo de datos previsto (para cuando se pida base de datos)
+## Modelo de datos (si se pasa a base de datos)
 
 > Esquema orientativo. Se ajustará cuando se conozca el motor de base de datos; la sintaxis del
 > autoincremental cambia según el motor (`AUTOINCREMENT` en SQLite, `IDENTITY` en SQL Server,
@@ -304,7 +396,8 @@ WHERE e.Estado = 1
 ORDER BY e.NombreComercial, p.Apellidos, p.Nombre;
 ```
 
-### Cambios en el código al pasar a base de datos
+### Cómo pasar a base de datos
 
-Solo se añaden `RepositorioPersonasBD` y `RepositorioEmpresasBD` (implementan las mismas interfaces) y se cambian
-las dos líneas de `Program.cs` que crean los repositorios.
+Solo cambia la capa `Infrastructure`: se añade un almacén o unos repositorios de BD que implementen
+`IRepositorioPersonas` e `IRepositorioEmpresas` (o `IAlmacenAgenda`) y se cambia `CrearAlmacen` en `Program.cs`.
+`AgendaService` y `ConsoleUI` no se tocan. El JSON actual ya guarda las mismas columnas que tendrían las tablas.
